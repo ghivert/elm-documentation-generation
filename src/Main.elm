@@ -42,13 +42,8 @@ update msg model =
           ( model
           , documentations
             |> List.map toHtmlString
-            |> List.map toJson
-            |> Encode.list
-            |> \content ->
-              Encode.object
-                [ ("msg", Encode.string "CreateDocsFiles")
-                , ("docsFiles", content)
-                ]
+            |> List.map toJsonDocsFiles
+            |> encodeDocsFilesToJsonMsg
             |> toJs
           )
 
@@ -70,11 +65,24 @@ toHtmlString { name, comment, aliases, unions, values } =
       ]
   )
 
-toJson : (String, H.Html) -> Encode.Value
-toJson (name, content) =
+toJsonDocsFiles : (String, H.Html) -> Encode.Value
+toJsonDocsFiles (name, content) =
   Encode.object
     [ ( name
       , Encode.string
         (H.htmlToString content)
       )
     ]
+
+encodeDocsFilesToJsonMsg : List Encode.Value -> Encode.Value
+encodeDocsFilesToJsonMsg values =
+  let
+    msgEncoder content =
+      Encode.object
+        [ ("msg", Encode.string "CreateDocsFiles")
+        , ("docsFiles", content)
+        ]
+  in
+    values
+    |> Encode.list
+    |> msgEncoder
