@@ -1,9 +1,17 @@
+// This module use an architecture similar to elm.
+// It tries to mimic the model -> update -> new model structure, even if
+// no model are present there.
+// All it remains is the message flowing in each update.
+
+// Kernel part, defined by Node.
 const fs = require('fs')
 const cwd = process.cwd()
 
+// Load and launch the elm part.
 const Elm = require([cwd, 'dist/app.js'].join('/'))
 const app = Elm.Main.worker()
 
+// Defines the messages used in the update.
 const READ_DOCS = 'ReadDocs'
 const CREATE_DOCS_FILES = 'CreateDocsFiles'
 
@@ -14,12 +22,12 @@ function readDocs(docsFile) {
   }
 }
 
-// Equivalent to subscriptions in Elm.
+// Equivalent to subscriptions in elm.
 app.ports.toJs.subscribe(function(msg) {
   update(msg)
 })
 
-// Equivalent to update in Elm.
+// Equivalent to update in elm.
 function update(msg) {
   switch(msg.msg) {
     case CREATE_DOCS_FILES:
