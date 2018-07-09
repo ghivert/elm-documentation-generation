@@ -2,15 +2,19 @@ module Elm.Module.Comment exposing (Struct(..), parse)
 
 import Parser exposing (..)
 
+type InternalStruct
+  = InternalMarkdown String
+  | InternalDocsTag (List String)
+
 type Struct
-  = Markdown String
+  = Markdown (List String)
   | DocsTag (List String)
 
-isEmpty : Struct -> Bool
+isEmpty : InternalStruct -> Bool
 isEmpty struct =
   case struct of
-    Markdown content -> content == ""
-    DocsTag content -> content == []
+    InternalMarkdown content -> content == ""
+    InternalDocsTag content -> content == []
 
 parse : String -> Result Error (List Struct)
 parse comment =
@@ -20,14 +24,14 @@ parse comment =
   |> List.map (run parser)
   |> List.foldr flattenResults (Ok [])
 
-parser : Parser Struct
+parser : Parser InternalStruct
 parser =
   oneOf
-    [ succeed DocsTag
+    [ succeed InternalDocsTag
       |. keyword "@docs"
       |. ignore (Exactly 1) isWhitespace
       |= repeat oneOrMore docsTagParser
-    , succeed Markdown
+    , succeed InternalMarkdown
       |= keep zeroOrMore (always True)
     ]
 
@@ -61,7 +65,7 @@ spaces : Parser ()
 spaces = ignore zeroOrMore isWhitespace
 
 flattenResults
-   : Result Error Struct
+   : Result Error InternalStruct
   -> Result Error (List Struct)
   -> Result Error (List Struct)
 flattenResults element acc =
@@ -71,4 +75,17 @@ flattenResults element acc =
       case element of
         Err error -> Err error
         Ok element ->
-          Ok (if isEmpty element then content else element :: content)
+          Ok <|
+            case element of
+              InternalMarkdown markdownContent ->
+                case content of
+                  hd :: tl ->
+                    case hd of
+                      Markdown content_ ->
+                        Markdown (markdownContent :: content_) :: tl
+                      _ ->
+                        Markdown [ markdownContent ] :: hd :: tl
+                  [] ->
+                    [ Markdown [ markdownContent ] ]
+              InternalDocsTag docsTagContent ->
+                DocsTag docsTagContent :: content
