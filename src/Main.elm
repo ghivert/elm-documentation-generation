@@ -5,7 +5,7 @@ import Json.Encode as Encode
 import Elm.Documentation as Documentation exposing (Documentation)
 import Html.String as H
 
-import Elm.Module.Comment as Comment
+import Parser.Comment as Comment
 
 port fromJs : (Decode.Value -> msg) -> Sub msg
 port toJs : Encode.Value -> Cmd msg
@@ -66,9 +66,26 @@ toHtmlString { name, comment, aliases, unions, values } =
             [ H.text name ]
           , H.div
             [ H.class "comments" ]
-            (List.concatMap Comment.toHtml content)
+            (List.concatMap commentToHtml content)
           ]
       )
+
+commentToHtml : Comment.Struct -> List H.Html
+commentToHtml struct =
+  case struct of
+    Comment.Markdown content ->
+      [ H.pre
+        [ H.class "markdown-content" ]
+        [ H.text (String.join "\n" content) ]
+      ]
+    Comment.DocsTag content ->
+      List.map
+        (\text ->
+          H.div
+            [ H.class "function-content" ]
+            [ H.text text ]
+        )
+        content
 
 toJsonDocsFiles : (String, H.Html) -> Encode.Value
 toJsonDocsFiles (name, content) =
