@@ -39,6 +39,12 @@ pre = node "pre"
 span : List Attribute -> List Html -> Html
 span = node "span"
 
+br : List Attribute -> List Html -> Html
+br = node "br"
+
+hr : List Attribute -> List Html -> Html
+hr = node "hr"
+
 h1 : List Attribute -> List Html -> Html
 h1 = node "h1"
 
