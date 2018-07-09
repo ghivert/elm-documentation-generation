@@ -1,4 +1,4 @@
-module Elm.Module.Comment exposing (..)
+module Elm.Module.Comment exposing (Struct(..), parse)
 
 import Parser exposing (..)
 
@@ -23,17 +23,42 @@ parse comment =
 parser : Parser Struct
 parser =
   oneOf
-    [ symbol "@docs"
-      |> andThen (always (keep oneOrMore (always True)))
-      |> andThen checkEndOfLine
-      |> map (String.split "," >> List.map String.trim)
-      |> map DocsTag
+    [ succeed DocsTag
+      |. keyword "@docs"
+      |. ignore (Exactly 1) isWhitespace
+      |= repeat oneOrMore docsTagParser
     , succeed Markdown
       |= keep zeroOrMore (always True)
     ]
 
+docsTagParser : Parser String
+docsTagParser =
+  let keepVariableName = keep oneOrMore isNotComma in
+  oneOf
+    [ keepVariableName |> andThen checkEndOfLine
+    , keepVariableName |> andThen ignoreCommaAndWhitespace
+    ]
+
 checkEndOfLine : String -> Parser String
 checkEndOfLine content = map (always content) end
+
+isComma : Char -> Bool
+isComma char = char == ','
+
+isNotComma : Char -> Bool
+isNotComma = not << isComma
+
+isWhitespace : Char -> Bool
+isWhitespace char = char == ' '
+
+ignoreCommaAndWhitespace : String -> Parser String
+ignoreCommaAndWhitespace content =
+  symbol ","
+  |> andThen (always spaces)
+  |> andThen (always (succeed content))
+
+spaces : Parser ()
+spaces = ignore zeroOrMore isWhitespace
 
 flattenResults
    : Result Error Struct
