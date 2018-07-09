@@ -30,6 +30,12 @@ attribute name content = StringAttribute (name, content)
 div : List Attribute -> List Html -> Html
 div = node "div"
 
+code : List Attribute -> List Html -> Html
+code = node "code"
+
+pre : List Attribute -> List Html -> Html
+pre = node "pre"
+
 span : List Attribute -> List Html -> Html
 span = node "span"
 
