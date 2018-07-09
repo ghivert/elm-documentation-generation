@@ -1,6 +1,8 @@
-module Elm.Module.Comment exposing (Struct(..), parse)
+module Elm.Module.Comment exposing (Struct(..), toHtml, parse)
 
 import Parser exposing (..)
+
+import Html.String as H
 
 type InternalStruct
   = InternalMarkdown String
@@ -23,6 +25,23 @@ parse comment =
   |> String.split "\n"
   |> List.map (run parser)
   |> List.foldr flattenResults (Ok [])
+
+toHtml : Struct -> List H.Html
+toHtml struct =
+  case struct of
+    Markdown content ->
+      [ H.pre
+        [ H.class "markdown-content" ]
+        [ H.text (String.join "\n" content) ]
+      ]
+    DocsTag content ->
+      List.map
+        (\text ->
+          H.div
+            [ H.class "function-content" ]
+            [ H.text text ]
+        )
+        content
 
 parser : Parser InternalStruct
 parser =
