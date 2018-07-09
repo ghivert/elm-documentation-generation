@@ -5,6 +5,8 @@ import Json.Encode as Encode
 import Elm.Documentation as Documentation exposing (Documentation)
 import Html.String as H
 
+import Elm.Module.Comment as Comment
+
 port fromJs : (Decode.Value -> msg) -> Sub msg
 port toJs : Encode.Value -> Cmd msg
 
@@ -53,17 +55,20 @@ subscriptions model =
 
 toHtmlString : Documentation -> (String, H.Html)
 toHtmlString { name, comment, aliases, unions, values } =
-  ( name
-  , H.div
-      [ H.style [ ("padding", "6px") ] ]
-      [ H.h1
-        [ H.class "module-name" ]
-        [ H.text name ]
+  case Comment.parse comment of
+    Err error -> (toString error, H.text "error")
+    Ok content ->
+      ( name
       , H.div
-        [ H.class "comments" ]
-        [ H.text comment ]
-      ]
-  )
+          [ H.style [ ("padding", "6px") ] ]
+          [ H.h1
+            [ H.class "module-name" ]
+            [ H.text name ]
+          , H.div
+            [ H.class "comments" ]
+            (List.concatMap Comment.toHtml content)
+          ]
+      )
 
 toJsonDocsFiles : (String, H.Html) -> Encode.Value
 toJsonDocsFiles (name, content) =
