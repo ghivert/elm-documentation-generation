@@ -1,22 +1,22 @@
-module Parser.Comment exposing (Struct(..), parse)
+module Parser.Comment exposing (Comment(..), parse)
 
 import Parser exposing (..)
 
-type InternalStruct
+type Internal
   = InternalMarkdown String
   | InternalDocsTag (List String)
 
-type Struct
+type Comment
   = Markdown (List String)
   | DocsTag (List String)
 
-isEmpty : InternalStruct -> Bool
+isEmpty : Internal -> Bool
 isEmpty struct =
   case struct of
     InternalMarkdown content -> content == ""
     InternalDocsTag content -> content == []
 
-parse : String -> Result Error (List Struct)
+parse : String -> Result Error (List Comment)
 parse comment =
   comment
   |> String.trim
@@ -24,7 +24,7 @@ parse comment =
   |> List.map (run parser)
   |> List.foldr flattenResults (Ok [])
 
-parser : Parser InternalStruct
+parser : Parser Internal
 parser =
   oneOf
     [ succeed InternalDocsTag
@@ -65,9 +65,9 @@ spaces : Parser ()
 spaces = ignore zeroOrMore isWhitespace
 
 flattenResults
-   : Result Error InternalStruct
-  -> Result Error (List Struct)
-  -> Result Error (List Struct)
+   : Result Error Internal
+  -> Result Error (List Comment)
+  -> Result Error (List Comment)
 flattenResults element acc =
   case acc of
     Err error -> Err error
