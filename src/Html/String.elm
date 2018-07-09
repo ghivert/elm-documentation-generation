@@ -30,6 +30,9 @@ attribute name content = StringAttribute (name, content)
 div : List Attribute -> List Html -> Html
 div = node "div"
 
+a : List Attribute -> List Html -> Html
+a = node "a"
+
 code : List Attribute -> List Html -> Html
 code = node "code"
 
@@ -53,6 +56,15 @@ class = attribute "class"
 
 style : List (String, String) -> Attribute
 style content = StyleAttribute content
+
+href : String -> Attribute
+href = attribute "href"
+
+rel : String -> Attribute
+rel = attribute "rel"
+
+src : String -> Attribute
+src = attribute "src"
 
 htmlToString : Html -> String
 htmlToString html =

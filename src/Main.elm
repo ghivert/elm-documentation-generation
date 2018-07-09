@@ -9,7 +9,7 @@ import Html.String as H
 import Parser.Comment as Comment
 import Helpers.Html as Helpers
 import Helpers.String as Helpers
-
+import Generator.Style as Style
 port fromJs : (Decode.Value -> msg) -> Sub msg
 port toJs : Encode.Value -> Cmd msg
 
@@ -19,6 +19,19 @@ type alias Model =
 type Msg
   = FromJs Decode.Value
   | ToHtmlDocumentation
+
+pageScript : String
+pageScript = """
+document.addEventListener('DOMContentLoaded', function(event) {
+  const converter = new showdown.Converter({ extensions: [ 'prettify' ] })
+  const htmlNodes = document.getElementsByClassName('markdown')
+  const nodes = Array.prototype.slice.call(htmlNodes)
+  nodes.forEach(function(elem) {
+    const md = converter.makeHtml(elem.textContent)
+    elem.innerHTML = md
+  })
+})
+"""
 
 main : Program Never Model Msg
 main =
@@ -64,7 +77,20 @@ toHtmlString ({ name, comment } as documentation) =
       ( name
       , H.div
           [ H.style [ ("padding", "6px") ] ]
-          [ H.h1
+          [ H.node "style" [] [ H.text Style.githubStyle ]
+          , H.node "style" [] [ H.text Style.pageStyle ]
+          , H.node "script" [] [ H.text pageScript ]
+          , H.node "link"
+            [ H.href "https://fonts.googleapis.com/css?family=Open+Sans|Roboto+Mono"
+            , H.rel "stylesheet"
+            ] []
+          , H.node "script"
+            [ H.src "https://cdn.rawgit.com/showdownjs/showdown/1.8.6/dist/showdown.min.js" ] []
+          , H.node "script"
+            [ H.src "https://cdn.jsdelivr.net/npm/showdown-prettify@1.3.0/dist/showdown-prettify.min.js" ] []
+          , H.node "script"
+            [ H.src "https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js" ] []
+          , H.h1
             [ H.class "module-name" ]
             [ H.text name ]
           , H.div
@@ -92,8 +118,8 @@ commentToHtmlString : Documentation -> Comment.Comment -> List H.Html
 commentToHtmlString documentation comment =
   case comment of
     Comment.Markdown content ->
-      [ H.pre
-        [ H.class "markdown-content" ]
+      [ H.div
+        [ H.class "markdown" ]
         [ H.text (Helpers.newlineJoin content) ]
       ]
     Comment.DocsTag content ->
@@ -104,12 +130,21 @@ generateDocTagDocumentation documentation name =
   case findByName name documentation of
     Nothing -> H.text ""
     Just content ->
-      H.div []
-        [ generateDocumentationWrapperDocumentation content
-        , H.hr [] []
-        , H.div []
-          [ H.text (extractDocumentationWrapperComment content) ]
-        ]
+      let bodyComment = String.trim (extractDocumentationWrapperComment content) in
+      H.div
+        [ H.class "function-definition" ]
+        (List.append
+          [ generateDocumentationWrapperDocumentation content ]
+          (if String.length bodyComment == 0 then
+            []
+           else
+             [ H.hr [] []
+             , H.div
+               [ H.class "markdown" ]
+               [ H.text bodyComment ]
+             ]
+          )
+        )
 
 generateDocumentationWrapperDocumentation : DocumentationWrapper -> H.Html
 generateDocumentationWrapperDocumentation valueAliasUnion =
@@ -196,6 +231,7 @@ typeToString indentSpace type_ =
         |> List.map (typeToString indentSpace)
         |> Helpers.spaceJoin
       ]
+      |> List.filter ((/=) "")
       |> Helpers.spaceJoin
     Type.Record values maybe ->
       values

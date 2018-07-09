@@ -8,7 +8,7 @@ surroundByParens : String -> String
 surroundByParens content = "(" ++ content ++ ")"
 
 surroundByBraces : String -> String
-surroundByBraces content = "{" ++ content ++ "}"
+surroundByBraces content = "{ " ++ content ++ " }"
 
 spaceJoin : List String -> String
 spaceJoin = String.join " "

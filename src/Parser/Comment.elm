@@ -38,10 +38,13 @@ parser =
 docsTagParser : Parser String
 docsTagParser =
   let keepVariableName = keep oneOrMore isNotComma in
-  oneOf
-    [ keepVariableName |> andThen checkEndOfLine
-    , keepVariableName |> andThen ignoreCommaAndWhitespace
-    ]
+  keepVariableName
+    |> andThen
+      (\content -> oneOf
+        [ checkEndOfLine content
+        , ignoreCommaAndWhitespace content
+        ]
+      )
 
 checkEndOfLine : String -> Parser String
 checkEndOfLine content = map (always content) end
