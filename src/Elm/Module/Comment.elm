@@ -2,54 +2,48 @@ module Elm.Module.Comment exposing (..)
 
 import Parser exposing (..)
 
-type alias Comment =
-  { header : String
-  , docs : List String
-  }
-
 type Struct
-  = Header String
-  | Docs String
-  | End
+  = Markdown String
+  | DocsTag (List String)
 
--- parse : String -> Result Error Comment
--- parse comment =
---   comment
---   |> String.split "\n"
---   |> run
---
--- parser : Parser Comment
--- parser =
---   succeed Comment
---   |= keep zeroOrMore isNotArobase
---   |=
+isEmpty : Struct -> Bool
+isEmpty struct =
+  case struct of
+    Markdown content -> content == ""
+    DocsTag content -> content == []
 
-t : Parser (List Struct)
-t =
+parse : String -> Result Error (List Struct)
+parse comment =
+  comment
+  |> String.trim
+  |> String.split "\n"
+  |> List.map (run parser)
+  |> List.foldr flattenResults (Ok [])
+
+parser : Parser Struct
+parser =
   oneOf
-    [ keep oneOrMore isNotArobase
-      |> andThen
-        (\header ->
-          let deb = Debug.log "header" header in
-          oneOf
-            [ succeed (List.append [ Header header ] << List.singleton << Docs)
-              |. symbol "@docs"
-              |= keep oneOrMore (not << isNewline)
-            , keep (Exactly 1) ((==) '@')
-              |> andThen (\at ->
-                keep zeroOrMore (not << isNewline)
-                |> map (\endOfLine -> [ Header <| header ++ at ++ endOfLine ])
-              )
-            , end |> map (always (Debug.log "end" ([ End ])))
-            ]
-        )
+    [ symbol "@docs"
+      |> andThen (always (keep oneOrMore (always True)))
+      |> andThen checkEndOfLine
+      |> map (String.split "," >> List.map String.trim)
+      |> map DocsTag
+    , succeed Markdown
+      |= keep zeroOrMore (always True)
     ]
-  |> repeat zeroOrMore
-  |> map List.concat
-  |> andThen (\content -> end |> map (always (Debug.log "ici" content)))
 
-isNotArobase : Char -> Bool
-isNotArobase char = char /= '@'
+checkEndOfLine : String -> Parser String
+checkEndOfLine content = map (always content) end
 
-isNewline : Char -> Bool
-isNewline char = char == '\n'
+flattenResults
+   : Result Error Struct
+  -> Result Error (List Struct)
+  -> Result Error (List Struct)
+flattenResults element acc =
+  case acc of
+    Err error -> Err error
+    Ok content ->
+      case element of
+        Err error -> Err error
+        Ok element ->
+          Ok (if isEmpty element then content else element :: content)
